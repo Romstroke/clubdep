@@ -20,13 +20,13 @@ app.get('/', (req, res) => {
 // tipo adecuado, debe validarse que no se repitan los nombres de los deportes. Manejar esta ruta
 // con queryStrings.
 
+let deportes =
+{
+    deportes: []
+};
 // Cargar los deportes desde el archivo JSON si existe
 if (!fs.existsSync('deportes.json')) {
     try {
-        let deportes =
-        {
-            deportes: []
-        };
 
         const data = fs.writeFileSync('deportes.json', JSON.stringify(deportes));
         deportes = JSON.parse(data);
@@ -40,6 +40,25 @@ app.get('/agregar', (req, res) => {
 
     const data = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
 
+    //para validar que se entregan ambos parametros
+
+    if (nombre === "") {
+        return res.send('Debe ingresar un nombre al deporte');
+    }
+
+    if (precio === "") {
+        return res.send('Debe ingresar un precio al deporte');
+    }
+
+    //para validar que el precio sea un número
+
+    // Validar que el precio sea un número
+    if (isNaN(parseFloat(precio)) || !isFinite(precio)) {
+        return res.status(400).send('El precio del deporte debe ser un número');
+    }
+
+
+    //para que no se repita
     const deporteExistente = data.deportes.filter(deporte => deporte.nombre === nombre);
 
     if (deporteExistente.length > 0) {
@@ -51,13 +70,7 @@ app.get('/agregar', (req, res) => {
     console.log('ingresados: ', data.deportes);
     fs.writeFileSync('deportes.json', JSON.stringify(data));
 
-    res.send(
-        {
-            status: 200,
-            error: "false",
-            msg: "Deporte almacenado con éxito",
-            datos: data
-        })
+    res.send('Deporte agregado con éxito')
 
 });
 
@@ -67,4 +80,47 @@ app.get('/agregar', (req, res) => {
 app.get('/deportes', (req, res) => {
     const data = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
     res.json(data);
+});
+
+// 3. Crear una ruta que edite el precio de un deporte registrado, utilizando los parámetros de la
+// consulta y persista este cambio (2 Puntos). Recuerde que para modificar se debe consultar, por
+// tanto, hay que validar 2 cosas primero que se reciba el parámetro y después que exista el
+// deporte coincidente con el parámetro. Manejar esta ruta con queryStrings.
+
+app.get('/editar', (req, res) => {
+    const { nombre, precio } = req.query;
+
+    const data = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
+
+    //modificar
+    let nuevoPrecio = data.deportes.map(deporte =>{ //el map crea otro arreglo
+        if(deporte.nombre === nombre){
+            deporte.precio = precio;
+        }
+        return deporte
+    });
+
+    //persistencia
+    fs.writeFileSync('deportes.json', JSON.stringify({deportes:nuevoPrecio}));
+    res.send('Deporte editado con éxito')
+
+});
+
+// 4. Crear una ruta que elimine un deporte solicitado desde el cliente y persista este cambio (3 Puntos). En
+// el Backend Validar que se recibe el parámetro requerido, también validar después si existe el
+// deporte solicitado y solo si existe se podrá eliminar. Manejar esta ruta utilizando parámetros no
+// queryStrings, ojo, que esto requiere un pequeño cambio en el Front.
+
+app.get('/eliminar/:nombre' , (req,res) => {
+    const nombreDeporte = req.params.nombre;
+
+    const data = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
+
+    const deportesExistentes = data.deportes.filter(deporte => deporte.nombre !== nombreDeporte);
+
+     //persistencia
+     fs.writeFileSync('deportes.json', JSON.stringify({deportes:deportesExistentes}));
+     res.send('Deporte eliminado con éxito')
+    
+
 });
