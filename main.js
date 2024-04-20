@@ -15,19 +15,21 @@ app.get('/', (req, res) => {
 
 //funcion que lee el json
 
+function leerJson() {
+    const data = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
+    return data;
+}
+
 // 1. Crear una ruta que reciba el nombre y precio de un nuevo deporte, lo persista en un archivo JSON
 // (3 Puntos). Validar en el backend que se reciben los parámetros necesarios o requeridos y en el
 // tipo adecuado, debe validarse que no se repitan los nombres de los deportes. Manejar esta ruta
 // con queryStrings.
 
-let deportes =
-{
-    deportes: []
-};
-// Cargar los deportes desde el archivo JSON si existe
+let deportes = { deportes: [] };
+
+//crear deportes.json 
 if (!fs.existsSync('deportes.json')) {
     try {
-
         const data = fs.writeFileSync('deportes.json', JSON.stringify(deportes));
         deportes = JSON.parse(data);
     } catch (err) {
@@ -38,7 +40,7 @@ if (!fs.existsSync('deportes.json')) {
 app.get('/agregar', (req, res) => {
     const { nombre, precio } = req.query;
 
-    const data = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
+    const data = leerJson();
 
     //para validar que se entregan ambos parametros
 
@@ -50,11 +52,11 @@ app.get('/agregar', (req, res) => {
         return res.send('Debe ingresar un precio al deporte');
     }
 
-    //para validar que el precio sea un número
+    //para validar que el precio sea un número y no negativo
 
     // Validar que el precio sea un número
-    if (isNaN(parseFloat(precio)) || !isFinite(precio)) {
-        return res.status(400).send('El precio del deporte debe ser un número');
+    if (precio <= 0 || isNaN(parseFloat(precio))) {
+        return res.send('El precio del deporte debe ser un número positivo');
     }
 
 
@@ -78,7 +80,7 @@ app.get('/agregar', (req, res) => {
 // registrados (2 Puntos).
 
 app.get('/deportes', (req, res) => {
-    const data = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
+    const data = leerJson();
     res.json(data);
 });
 
@@ -90,18 +92,18 @@ app.get('/deportes', (req, res) => {
 app.get('/editar', (req, res) => {
     const { nombre, precio } = req.query;
 
-    const data = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
+    const data = leerJson();
 
     //modificar
-    let nuevoPrecio = data.deportes.map(deporte =>{ //el map crea otro arreglo
-        if(deporte.nombre === nombre){
+    let nuevoPrecio = data.deportes.map(deporte => { //el map crea otro arreglo
+        if (deporte.nombre === nombre) {
             deporte.precio = precio;
         }
         return deporte
     });
 
     //persistencia
-    fs.writeFileSync('deportes.json', JSON.stringify({deportes:nuevoPrecio}));
+    fs.writeFileSync('deportes.json', JSON.stringify({ deportes: nuevoPrecio }));
     res.send('Deporte editado con éxito')
 
 });
@@ -111,16 +113,29 @@ app.get('/editar', (req, res) => {
 // deporte solicitado y solo si existe se podrá eliminar. Manejar esta ruta utilizando parámetros no
 // queryStrings, ojo, que esto requiere un pequeño cambio en el Front.
 
-app.get('/eliminar/:nombre' , (req,res) => {
+app.get('/eliminar/:nombre', (req, res) => {
+
     const nombreDeporte = req.params.nombre;
 
-    const data = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
+    const data = leerJson();
+
+    // verificar que el deporte exista
+    const deporteAEliminar = data.deportes.find(deporte => deporte.nombre === nombreDeporte);
+    if (!deporteAEliminar) {
+        return res.status(404).send('El deporte no existe');
+    }
 
     const deportesExistentes = data.deportes.filter(deporte => deporte.nombre !== nombreDeporte);
 
-     //persistencia
-     fs.writeFileSync('deportes.json', JSON.stringify({deportes:deportesExistentes}));
-     res.send('Deporte eliminado con éxito')
-    
+    //persistencia
+    fs.writeFileSync('deportes.json', JSON.stringify({ deportes: deportesExistentes }));
+    res.send('Deporte eliminado con éxito')
 
+
+});
+
+//ruta no existente
+
+app.get('*', (req,res) => {
+    res.status(404).send('ruta inválida, pruebe con /deportes para listar deportes, y / para ir al home');
 });
